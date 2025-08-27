@@ -32,7 +32,7 @@ export type Proof = {
 	/**
 	 * The witness for this proof.
 	 */
-	witness?: string | P2PKWitness | HTLCWitness;
+	witness?: string | P2PKWitness | HTLCWitness | CairoWitness;
 };
 
 /**
@@ -57,6 +57,13 @@ export type HTLCWitness = {
 	 * An array of signatures in hex format.
 	 */
 	signatures?: string[];
+};
+
+export type CairoWitness = {
+	/**
+	 * A JSON-serialized CairoProof.
+	 */
+	cairo_proof_json: string;
 };
 
 /**
