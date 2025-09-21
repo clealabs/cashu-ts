@@ -1,27 +1,27 @@
 import { schnorr } from '@noble/curves/secp256k1';
 import { sha256 } from '@noble/hashes/sha256';
-import { parseP2PKSecret } from '../common/NUT11';
+import { parseSecret } from '../common/NUT10';
 import {
 	getP2PKExpectedKWitnessPubkeys,
 	getP2PKWitnessSignatures,
 	getP2PKNSigs,
 	verifyP2PKSecretSignature,
 } from '../client/NUT11';
-import { type Proof } from '../../model/types/index';
+import { type P2PKWitness, type Proof } from '../../model/types/index';
 import { type BlindedMessage } from '../client/index';
 
 export const verifyP2PKSig = (proof: Proof): boolean => {
 	if (!proof.witness) {
 		throw new Error('could not verify signature, no witness provided');
 	}
-	const parsedSecret = parseP2PKSecret(proof.secret);
+	const parsedSecret = parseSecret(proof.secret);
 	const witnesses = getP2PKExpectedKWitnessPubkeys(parsedSecret);
 	if (!witnesses.length) {
 		throw new Error('no signatures required, proof is unlocked');
 	}
 	let signatories = 0;
 	const requiredSigs = getP2PKNSigs(parsedSecret);
-	const signatures = getP2PKWitnessSignatures(proof.witness);
+	const signatures = getP2PKWitnessSignatures(proof.witness as string | P2PKWitness | undefined);
 	// Loop through witnesses to see if any of the signatures belong to them.
 	// We need to do this as Schnorr signatures are non-deterministic, so we
 	// count the number of valid witnesses, not the number of valid signatures

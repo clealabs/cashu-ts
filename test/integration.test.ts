@@ -28,13 +28,16 @@ import {
 } from '../src/utils';
 import { OutputData, OutputDataFactory } from '../src/model/OutputData';
 import { hexToBytes, bytesToHex, randomBytes } from '@noble/hashes/utils';
+import is_prime_executable from './crypto/client/executables/is_prime_executable.json';
+import { hashExecutableBytecode } from '../src/crypto/client/NUTXX';
+
 dns.setDefaultResultOrder('ipv4first');
 
 const externalInvoice =
 	'lnbc20u1p3u27nppp5pm074ffk6m42lvae8c6847z7xuvhyknwgkk7pzdce47grf2ksqwsdpv2phhwetjv4jzqcneypqyc6t8dp6xu6twva2xjuzzda6qcqzpgxqyz5vqsp5sw6n7cztudpl5m5jv3z6dtqpt2zhd3q6dwgftey9qxv09w82rgjq9qyyssqhtfl8wv7scwp5flqvmgjjh20nf6utvv5daw5h43h69yqfwjch7wnra3cn94qkscgewa33wvfh7guz76rzsfg9pwlk8mqd27wavf2udsq3yeuju';
 
 let request: Record<string, string> | undefined;
-const mintUrl = 'http://localhost:3338';
+const mintUrl = 'http://localhost:8085';
 const unit = 'sat';
 
 injectWebSocketImpl(ws);
@@ -285,6 +288,7 @@ describe('mint api', () => {
 		expect(response).toBeDefined();
 		expect(response.quote.state == MeltQuoteState.PAID).toBe(true);
 	});
+
 	test('mint deterministic', async () => {
 		const hexSeed = bytesToHex(randomBytes(64));
 		const mint = new CashuMint(mintUrl);

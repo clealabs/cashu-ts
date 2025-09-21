@@ -11,6 +11,7 @@ import { bytesToHex, hexToBytes, randomBytes } from '@noble/hashes/utils';
 import { type DLEQ, pointFromHex } from '../crypto/common/index';
 import { bytesToNumber, numberToHexPadded64, splitAmount } from '../utils';
 import { deriveBlindingFactor, deriveSecret } from '../crypto/client/NUT09';
+import { createCairoDataPayload } from '../crypto/client/NUTXX';
 
 export interface OutputDataLike {
 	blindedMessage: SerializedBlindedMessage;
@@ -33,9 +34,13 @@ export class OutputData implements OutputDataLike {
 	blindingFactor: bigint;
 	secret: Uint8Array;
 
-	constructor(blindedMessage: SerializedBlindedMessage, blidingFactor: bigint, secret: Uint8Array) {
+	constructor(
+		blindedMessage: SerializedBlindedMessage,
+		blindingFactor: bigint,
+		secret: Uint8Array,
+	) {
 		this.secret = secret;
-		this.blindingFactor = blidingFactor;
+		this.blindingFactor = blindingFactor;
 		this.blindedMessage = blindedMessage;
 	}
 
@@ -85,6 +90,17 @@ export class OutputData implements OutputDataLike {
 		return amounts.map((a) => this.createSingleP2PKData(p2pk, a, keyset.id));
 	}
 
+	static createCairoData(
+		cairoSend: { executable: string; expectedOutput: bigint },
+		amount: number,
+		keyset: MintKeys,
+		customSplit?: number[],
+	) {
+		const amounts = splitAmount(amount, keyset.keys, customSplit);
+		const cairoDataPayload = createCairoDataPayload(cairoSend.executable, cairoSend.expectedOutput);
+		return amounts.map((a) => this.createSingleCairoData(cairoDataPayload, a, keyset.id));
+	}
+
 	static createSingleP2PKData(
 		p2pk: {
 			pubkey: string | string[];
@@ -129,6 +145,29 @@ export class OutputData implements OutputDataLike {
 				newSecret[1].tags.push(['n_sigs_refund', String(n_sigs_refund)]); // NUT-10 string
 			}
 		}
+		const parsed = JSON.stringify(newSecret);
+		const secretBytes = new TextEncoder().encode(parsed);
+		const { r, B_ } = blindMessage(secretBytes);
+		return new OutputData(
+			new BlindedMessage(amount, B_, keysetId).getSerializedBlindedMessage(),
+			r,
+			secretBytes,
+		);
+	}
+
+	static createSingleCairoData(
+		cairoDataPayload: { programHash: string; outputHash: string },
+		amount: number,
+		keysetId: string,
+	) {
+		const newSecret: [string, { nonce: string; data: string; tags: string[][] }] = [
+			'Cairo',
+			{
+				nonce: bytesToHex(randomBytes(32)),
+				data: cairoDataPayload.programHash,
+				tags: [['program_output', cairoDataPayload.outputHash]],
+			},
+		];
 		const parsed = JSON.stringify(newSecret);
 		const secretBytes = new TextEncoder().encode(parsed);
 		const { r, B_ } = blindMessage(secretBytes);
